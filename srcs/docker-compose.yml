@@ -1,0 +1,72 @@
+version: '3'
+
+services:
+    nginx:
+      container_name: nginx
+      build: 
+        context: requirements/nginx
+        dockerfile: Dockerfile
+      ports:
+        - 443:443
+      volumes:
+        - wp_data:/var/www/localhost/htdocs
+      networks:
+        - network
+      depends_on:
+        - wordpress
+      restart: always
+
+    wordpress:
+      container_name: wordpress
+      build: 
+        context: requirements/wordpress
+        dockerfile: Dockerfile
+        args:
+          DATABASE_NAME:        ${DATABASE_NAME}
+          DATABASE_USER_NAME:   ${DATABASE_USER_NAME}
+          DATABASE_USER_PWD:    ${DATABASE_USER_PWD}
+          WP_AUTH_KEY:          ${WP_AUTH_KEY}
+          WP_SECURE_AUTH_KEY:   ${WP_SECURE_AUTH_KEY}
+          WP_LOGGED_IN_KEY:     ${WP_LOGGED_IN_KEY}
+          WP_NONCE_KEY:         ${WP_NONCE_KEY}
+          WP_AUTH_SALT:         ${WP_AUTH_SALT}
+          WP_SECURE_AUTH_SALT:  ${WP_SECURE_AUTH_SALT}
+          WP_LOGGED_IN_SALT:    ${WP_LOGGED_IN_SALT}
+          WP_NONCE_SALT:        ${WP_NONCE_SALT}
+      volumes:
+        - wp_data:/var/www/localhost/htdocs 
+      networks:
+        - network
+      depends_on:
+        mariadb:
+         condition: "service_healthy"
+      restart: always
+
+    mariadb:
+      container_name: mariadb
+      build:
+        context: requirements/mariadb
+        dockerfile: Dockerfile
+        args:
+          DATABASE_NAME:      ${DATABASE_NAME}
+          DATABASE_USER_NAME: ${DATABASE_USER_NAME}
+          DATABASE_USER_PWD:  ${DATABASE_USER_PWD}
+          DATABASE_MYSQL_PWD: ${DATABASE_MYSQL_PWD}
+          DATABASE_ROOT_PWD: ${DATABASE_ROOT_PWD}
+      volumes:
+        - mdb_data:/var/lib/mysql
+      networks:
+        - network
+      restart: always
+      healthcheck:
+        test: /usr/bin/mysql --user=${DATABASE_USER_NAME} --password=${DATABASE_USER_PWD} --execute "SHOW DATABASES;"
+        interval: 5s
+        timeout: 10s
+        retries: 12
+
+volumes:
+  wp_data:
+  mdb_data:
+
+networks:
+  network:
